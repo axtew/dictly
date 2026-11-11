@@ -6,6 +6,7 @@ import {
   createBindings,
   createI18nContext,
   Gate,
+  type I18nBindings,
   type I18nProviderProps,
 } from "./_bindings";
 
@@ -31,11 +32,20 @@ export type RegisteredI18n = Register extends { i18n: infer I extends AnyI18n }
   ? I
   : I18n<unknown, string>;
 
+type RegisteredBindings = I18nBindings<RegisteredI18n>;
+
 const context = createI18nContext<RegisteredI18n>();
 
-const bindings = createBindings(context);
+const bindings: RegisteredBindings = createBindings(context);
 
-export const { useT, useLocale, useFormatters, useI18n } = bindings;
+// Explicit types keep `RegisteredI18n` as a reference in the emitted .d.ts, so it is
+// resolved against the app's `Register`. An inferred type would be expanded at build
+// time, freezing whatever `Register` the library itself saw (`isolatedDeclarations`
+// in tsconfig.build.json forbids that).
+export const useT: RegisteredBindings["useT"] = bindings.useT;
+export const useLocale: RegisteredBindings["useLocale"] = bindings.useLocale;
+export const useFormatters: RegisteredBindings["useFormatters"] = bindings.useFormatters;
+export const useI18n: RegisteredBindings["useI18n"] = bindings.useI18n;
 
 /** Provides the registered instance to the hooks and waits for the first dictionary. */
 export function I18nProvider({

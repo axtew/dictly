@@ -9,6 +9,8 @@ export default defineConfig({
   format: "esm",
   platform: "neutral",
   target: "es2022",
+  // Library sources only, with isolatedDeclarations: see tsconfig.build.json.
+  tsconfig: "tsconfig.build.json",
   dts: true,
   clean: true,
 });
