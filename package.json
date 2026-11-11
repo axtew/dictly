@@ -50,7 +50,10 @@
     "test:watch": "vitest",
     "check:package": "publint && attw --pack . --profile esm-only",
     "lint:fix": "oxlint --type-aware --fix",
-    "typecheck:compat": "pnpm --package=typescript@5.0 dlx tsc -p tsconfig.compat.json"
+    "typecheck:compat": "pnpm --package=typescript@5.0 dlx tsc -p tsconfig.compat.json",
+    "example:dev": "pnpm build && pnpm --filter dictly-example dev",
+    "example:build": "pnpm build && pnpm --filter dictly-example build",
+    "example:deploy": "pnpm build && pnpm --filter dictly-example run deploy"
   },
   "peerDependencies": {
     "react": ">=18"

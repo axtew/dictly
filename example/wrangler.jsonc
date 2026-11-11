@@ -1,0 +1,8 @@
+{
+  // Cloudflare Workers Static Assets: only the static files from dist, no worker script.
+  "name": "dictly",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "dist",
+  },
+}

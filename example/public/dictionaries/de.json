@@ -1,0 +1,66 @@
+{
+  "meta": {
+    "title": "dictly Demo"
+  },
+  "header": {
+    "tagline": "Typisierte i18n für TypeScript und React. Das Wörterbuch ist ein einfaches Objekt.",
+    "language": "Sprache",
+    "slowNetwork": "Langsames Netz",
+    "slowNetworkHint": "Verzögert das erste Laden einer Sprache um 1,5 s. Der aktuelle Text bleibt so lange sichtbar.",
+    "loading": "Wird geladen: {:language}"
+  },
+  "nav": {
+    "text": "Text",
+    "formatters": "Formatierung",
+    "check": "Wörterbuch-Prüfung"
+  },
+  "text": {
+    "title": "Text und Platzhalter",
+    "intro": "Eine Übersetzung ist ein Property-Zugriff. Die Namen der Platzhalter sind aus dem String typisiert: Ein fehlender oder falsch geschriebener Parameter kompiliert nicht.",
+    "nameLabel": "Name",
+    "defaultName": "Anna",
+    "messagesLabel": "Neue Nachrichten",
+    "greeting": "Hallo, {:name}! Du hast {:messages}.",
+    "messages": { "one": "{:count} neue Nachricht", "other": "{:count} neue Nachrichten" },
+    "pluralTitle": "Pluralformen",
+    "pluralIntro": "Die Form wählt Intl.PluralRules der Sprache. Englisch und Deutsch brauchen zwei Formen, Russisch vier.",
+    "countLabel": "Anzahl",
+    "category": "Form: {:category}",
+    "recipes": { "one": "{:count} Rezept", "other": "{:count} Rezepte" },
+    "richTitle": "Elemente im Text",
+    "richIntro": "format aus dictly/react setzt React-Elemente in Platzhalter ein, so bleibt ein Satz mit Link ein einziger String im Wörterbuch.",
+    "rich": "Lies die {:docs} oder eröffne ein {:issue} auf GitHub.",
+    "docs": "Dokumentation",
+    "issue": "Issue"
+  },
+  "formatters": {
+    "title": "Intl-Formatierung",
+    "intro": "useFormatters() liefert Intl-Formatierer für die angezeigte Sprache. Die Instanzen werden gecacht, der Aufruf beim Rendern ist also günstig.",
+    "columns": { "what": "Was", "call": "Aufruf", "result": "Ergebnis" },
+    "number": "Zahl",
+    "currency": "Währung",
+    "percent": "Prozent",
+    "date": "Datum",
+    "time": "Uhrzeit",
+    "relativePast": "Relative Zeit, Vergangenheit",
+    "relativeFuture": "Relative Zeit, Zukunft",
+    "list": "Liste",
+    "ingredients": { "flour": "Mehl", "sugar": "Zucker", "eggs": "Eier" }
+  },
+  "check": {
+    "title": "Wörterbuch-Prüfung",
+    "intro": "Wörterbücher als TS-Module prüft TypeScript. JSON vom Server hat keine Typen, deshalb vergleicht checkDictionaries es zur Laufzeit mit der Referenzsprache: in einem Test, in der CI oder mit der Option validate von createI18n.",
+    "liveTitle": "Wörterbücher dieser Demo",
+    "running": "Wird geprüft...",
+    "liveOk": "{:languages}: keine Probleme.",
+    "liveIssues": { "one": "{:count} Problem gefunden", "other": "{:count} Probleme gefunden" },
+    "brokenTitle": "Eine Übersetzung mit Fehlern",
+    "brokenIntro": "Dieselbe Prüfung an einer kleinen Übersetzung mit typischen Fehlern:",
+    "reference": "Referenz (en)",
+    "translation": "Übersetzung (ru)",
+    "columns": { "path": "Schlüssel", "kind": "Problem", "message": "Meldung" }
+  },
+  "footer": {
+    "sources": "en und ru sind TS-Module, geladen mit import(), de ist JSON von {:path}."
+  }
+}

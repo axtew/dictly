@@ -23,6 +23,9 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - run: pnpm check:package
+      # The demo uses the built package as an app would: its typecheck and build
+      # catch a broken export or a type that only looks right inside the repo.
+      - run: pnpm --filter dictly-example build
 
   # Users of the library are on older TypeScript versions: the types (and their
   # tests in *.test-d.ts) must compile there too, not only on the version we develop with.
