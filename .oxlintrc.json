@@ -17,5 +17,13 @@
     "simple-import-sort/imports": "error",
     "simple-import-sort/exports": "error"
   },
-  "ignorePatterns": ["dist", "example/dist"]
+  "ignorePatterns": ["dist", "example/dist"],
+  "overrides": [
+    {
+      "files": ["**/*.test-d.ts"],
+      "rules": {
+        "vitest/expect-expect": "off"
+      }
+    }
+  ]
 }
