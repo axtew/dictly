@@ -34,6 +34,10 @@
       "types": "./dist/react/index.d.ts",
       "default": "./dist/react/index.js"
     },
+    "./check": {
+      "types": "./dist/check/index.d.ts",
+      "default": "./dist/check/index.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

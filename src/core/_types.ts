@@ -1,3 +1,4 @@
+import type { DictionaryIssue } from "../check";
 import type { Formatters, PluralFormatter } from "../format";
 import type { Dictionary } from "../types";
 import type { LocaleStorage } from "./_storage";
@@ -45,6 +46,13 @@ export interface I18nOptions<M extends Record<string, DictionaryLoader>, R exten
   htmlLang?: boolean;
   /** Called when a dictionary fails to load. `console.error` by default. */
   onError?: (error: unknown, locale: keyof M & string) => void;
+  /**
+   * Checks every loaded dictionary against the default one with `checkDictionaries`
+   * (loading the default one if needed). `true` reports to `console.warn`, a function
+   * receives the problems. Off by default; `import.meta.env.DEV` is a common value,
+   * or always on for dictionaries that come from a server.
+   */
+  validate?: boolean | ((issues: DictionaryIssue[], locale: keyof M & string) => void);
 }
 
 export type I18nStatus = "loading" | "ready" | "error";

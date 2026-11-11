@@ -1,3 +1,6 @@
+// `checkDictionaries` lives in `dictly/check`: tests and `validate` load it on demand,
+// so an app that does not validate does not ship it.
+export type { DictionaryIssue, DictionaryIssueKind } from "./check";
 export {
   cookieAdapter,
   type CookieAdapterOptions,

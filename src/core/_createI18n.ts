@@ -1,3 +1,4 @@
+import type { DictionaryIssue } from "../check";
 import { getFormatters } from "../format";
 import type { Dictionary } from "../types";
 import { getBrowserLanguages, matchLocale } from "./_detect";
@@ -46,7 +47,14 @@ export function createI18n<
     htmlLang = true,
     onError = (error: unknown, locale: L) =>
       console.error(`dictly: failed to load the "${locale}" dictionary`, error),
+    validate = false,
   } = options;
+
+  const reportIssues =
+    typeof validate === "function"
+      ? validate
+      : (issues: DictionaryIssue[], locale: L) =>
+          console.warn(`dictly: ${issues.length} problem(s) in the "${locale}" dictionary`, issues);
 
   const locales = Object.keys(loaders) as L[];
 
@@ -123,6 +131,8 @@ export function createI18n<
 
           loaded.set(locale, dictionary);
 
+          if (validate !== false) void validateLocale(locale, dictionary);
+
           return dictionary;
         })
         .finally(() => inFlight.delete(locale));
@@ -131,6 +141,31 @@ export function createI18n<
     }
 
     return request;
+  }
+
+  /**
+   * Compares a loaded dictionary with the reference one (the default language),
+   * loading the reference if needed. Off by default: meant for development and
+   * for dictionaries from a server. A failure here never affects the screen.
+   * The checker is imported on demand, so an app without `validate` does not ship it.
+   */
+  async function validateLocale(locale: L, dictionary: Dictionary<D>): Promise<void> {
+    try {
+      const { checkDictionaries } = await import("../check");
+      const reference = locale === defaultLocale ? dictionary : await load(defaultLocale);
+      const issues = checkDictionaries({
+        dictionaries: { [defaultLocale]: reference, [locale]: dictionary },
+        reference: defaultLocale,
+        intlLocales: {
+          [defaultLocale]: getIntlLocale(defaultLocale),
+          [locale]: getIntlLocale(locale),
+        },
+      }).filter((issue) => issue.locale === locale);
+
+      if (issues.length > 0) reportIssues(issues, locale);
+    } catch {
+      // The reference failed to load: that is reported by the loading itself.
+    }
   }
 
   function show(locale: L, dictionary: Dictionary<D>) {

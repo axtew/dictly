@@ -6,6 +6,11 @@ export type FormatValue = string | number;
 /** `{:name}`: the name runs to the first closing brace, as in the `Placeholders` type. */
 const PLACEHOLDER = /\{:([^}]*)\}/g;
 
+/** Placeholder names written in a string, each once. */
+export function parsePlaceholders(text: string): Set<string> {
+  return new Set(Array.from(text.matchAll(PLACEHOLDER), (match) => match[1] ?? ""));
+}
+
 /**
  * Puts parameters into the `{:placeholders}` of a translated string.
  *
