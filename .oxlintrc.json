@@ -20,7 +20,7 @@
   "ignorePatterns": ["dist", "example/dist"],
   "overrides": [
     {
-      "files": ["**/*.test-d.ts"],
+      "files": ["**/*.test-d.ts", "**/*.test-d.tsx"],
       "rules": {
         "vitest/expect-expect": "off"
       }

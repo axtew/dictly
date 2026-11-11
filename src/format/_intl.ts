@@ -1,17 +1,20 @@
 import { createPlural, type PluralFormatter } from "./_plural";
 
-/** `Intl` formatting bound to one language. Formatter instances are cached per options. */
+/**
+ * `Intl` formatting bound to one language. Formatter instances are cached per options.
+ * Plain function properties, so `const { number, plural } = formatters` is safe.
+ */
 export interface Formatters {
   /** The `Intl` locale the formatters use ("en-GB" for "en", if so mapped). */
   readonly locale: string;
-  number(value: number | bigint, options?: Intl.NumberFormatOptions): string;
-  date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
-  relativeTime(
+  number: (value: number | bigint, options?: Intl.NumberFormatOptions) => string;
+  date: (value: Date | number, options?: Intl.DateTimeFormatOptions) => string;
+  relativeTime: (
     value: number,
     unit: Intl.RelativeTimeFormatUnit,
     options?: Intl.RelativeTimeFormatOptions,
-  ): string;
-  list(items: Iterable<string>, options?: Intl.ListFormatOptions): string;
+  ) => string;
+  list: (items: Iterable<string>, options?: Intl.ListFormatOptions) => string;
   plural: PluralFormatter;
 }
 
