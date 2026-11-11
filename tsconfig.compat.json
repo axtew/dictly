@@ -1,0 +1,18 @@
+{
+  // Consumer-side type check for older TypeScript versions (CI matrix).
+  // Only options that exist since TypeScript 5.0, so the check is about our types,
+  // not about compiler flags of the current version.
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  },
+  "include": ["src"]
+}
