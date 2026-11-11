@@ -1,7 +1,9 @@
 {
   // Consumer-side type check for older TypeScript versions (CI matrix).
   // Only options that exist since TypeScript 5.0, so the check is about our types,
-  // not about compiler flags of the current version.
+  // not about compiler flags of the current version. Deliberately without the extra
+  // strictness of tsconfig.json (noUncheckedIndexedAccess, exactOptionalPropertyTypes):
+  // that is how most projects are set up, the strict variant is covered by `pnpm typecheck`.
   "compilerOptions": {
     "target": "es2022",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
@@ -10,9 +12,7 @@
     "jsx": "react-jsx",
     "noEmit": true,
     "skipLibCheck": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "strict": true
   },
   "include": ["src"]
 }

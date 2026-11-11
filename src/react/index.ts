@@ -1,1 +1,1 @@
-export { VERSION } from "../index";
+export type { Dictionary, Translation } from "../types";
