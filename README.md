@@ -47,6 +47,7 @@ l.recipse; // type error: no such key
 - [Switching the language](#switching-the-language)
 - [Hooks without the factory](#hooks-without-the-factory)
 - [Outside React](#outside-react)
+- [Testing](#testing)
 - [Bundle size](#bundle-size)
 - [Limitations](#limitations)
 
@@ -188,6 +189,19 @@ Each language has its own set of forms: Russian needs `one`, `few`, `many` and `
 
 The singular form may omit `{:count}`: `{ one: "a recipe", other: "{:count} recipes" }`.
 
+A phrase with several numbers gets a set of forms per number and a template that joins them, so the word order stays in the dictionary:
+
+```ts
+imported: "Imported {:products} and {:recipes}",
+products: { one: "{:count} product", other: "{:count} products" },
+recipes: { one: "{:count} recipe", other: "{:count} recipes" },
+```
+
+```ts
+format(l.imported, { products: plural(l.products, 3), recipes: plural(l.recipes, 1) });
+// "Imported 3 products and 1 recipe"
+```
+
 ## Elements inside text
 
 `format` from `dictly/react` also takes React elements, so a sentence with a link or bold text stays one string, and translators see it whole:
@@ -258,6 +272,19 @@ A few things to keep in mind:
 
 Compared with `typeof en`, placeholder names are written twice, in the interface and in the string. If they drift apart, the compiler shows it.
 
+A middle ground: keep `typeof en` and pin only the sections that must follow a type, such as the labels of an enum or a union. A new member without a label is then a type error, and the literal strings with their placeholders stay as they are:
+
+```ts
+type Status = "draft" | "published";
+
+export default {
+  status: {
+    draft: "Draft",
+    published: "Published",
+  } satisfies Record<Status, string>,
+} as const;
+```
+
 ## JSON dictionaries
 
 Dictionaries can also come from a server or from `public/`. The loader returns the parsed JSON:
@@ -302,7 +329,7 @@ With a plain `Record<string, ...>` or `any`, everything still works, but the par
 
 ## Checking dictionaries
 
-TypeScript checks dictionaries written as TS modules. For JSON, `checkDictionaries` compares every language with the reference:
+`checkDictionaries` compares every language with the reference. For JSON it is the only check. For TS modules it adds what the compiler does not see: empty strings and the plural forms a particular language needs.
 
 ```ts
 // dictionaries.test.ts
@@ -312,6 +339,20 @@ import ru from "../public/dictionaries/ru.json";
 
 test("dictionaries match the reference", () => {
   expect(checkDictionaries({ dictionaries: { en, ru }, reference: "en" })).toEqual([]);
+});
+```
+
+With TS modules, Vite's `import.meta.glob` collects every language file, so a new language is checked without editing the test:
+
+```ts
+const dictionaries = Object.fromEntries(
+  Object.entries(import.meta.glob("./locales/*.ts", { eager: true, import: "default" })).map(
+    ([path, dictionary]) => [path.replace(/^.*/|.ts$/g, ""), dictionary],
+  ),
+);
+
+test("dictionaries match the reference", () => {
+  expect(checkDictionaries({ dictionaries, reference: "en" })).toEqual([]);
 });
 ```
 
@@ -331,10 +372,12 @@ Each problem is `{ locale, path, kind, message }`, where `kind` is one of:
 The same check can run in the app: with `validate`, every loaded dictionary is compared with the reference language (loaded for it if needed).
 
 ```ts
-createI18n({ locales, defaultLocale: "en", validate: import.meta.env.DEV });
+import { checkDictionaries } from "dictly/check";
+
+createI18n({ locales, defaultLocale: "en", validate: import.meta.env.DEV && checkDictionaries });
 ```
 
-`true` reports to `console.warn`, a function receives the problems: `validate: (issues, locale) => sendToMonitoring(issues)`. The check lives in `dictly/check` and is loaded with `import()` only when `validate` is on, so an app without it does not ship it.
+The app passes the checker itself: in a production build the condition is `false`, and the bundler leaves `dictly/check` out. Problems go to `console.warn`, or to `onIssues`: `onIssues: (issues, locale) => sendToMonitoring(issues)`.
 
 ## Switching the language
 
@@ -355,9 +398,10 @@ function LanguageSwitcher() {
 }
 ```
 
-- The current dictionary stays on screen until the next one arrives; `pendingLocale` is the language being loaded. A language loaded once switches at once.
+- The current dictionary stays on screen until the next one arrives; `pendingLocale` is the language being loaded. A language loaded once switches synchronously, inside the `setLocale` call.
 - Fast clicks are safe: only the latest choice wins, an older request finishing later is ignored.
 - If a language fails to load, the screen keeps the previous one, the error goes to `error` in `useLocale()` and to `onError`, and calling `setLocale` again retries.
+- `setLocale` with an unknown language rejects. Check a string from outside (a URL, a user profile) with `i18n.isLocale(value)` first.
 - `preload(locale)` on the instance loads a language in the background, on hover over the switcher for example.
 
 The provider covers the first load:
@@ -365,22 +409,27 @@ The provider covers the first load:
 ```tsx
 <I18nProvider
   fallback={<Spinner />}
-  errorFallback={(retry) => <button onClick={retry}>Try again</button>}
+  errorFallback={(retry) => (
+    <button onClick={retry}>
+      <RefreshIcon />
+    </button>
+  )}
 >
 ```
 
-`errorFallback` is shown only when no dictionary could be loaded at all; it can be a node or a function that gets `retry`.
+`errorFallback` is shown only when no dictionary could be loaded at all; it can be a node or a function that gets `retry` and the error. There is no dictionary at that point, so its text cannot come from one: keep it language-neutral, like the icon above, or pick the text by `navigator.language`.
 
-**Which language comes first:** `initialLocale` if given (a language from a user profile, for example), then the stored choice, then the browser languages (`navigator.languages`, the whole list: `ru-RU` matches `ru`), then `defaultLocale`. If that language fails, dictly falls back to `defaultLocale`.
+**Which language comes first:** `initialLocale` if given (a language from a user profile, for example), then the stored choice, then the browser languages (`navigator.languages`, the whole list: `ru-RU` matches `ru`), then `defaultLocale`. If that language fails, dictly falls back to `defaultLocale`. The fallback is not stored: the stored choice is tried again on the next start.
 
-| Option        | Default                                |                                                                                                                         |
-| ------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `storage`     | `localStorageAdapter("dictly.locale")` | where the explicit choice is kept. `cookieAdapter("locale")` when the server should know it too, `null` to keep nothing |
-| `detect`      | `true`                                 | pick a language from `navigator.languages` when nothing is stored                                                       |
-| `htmlLang`    | `true`                                 | set `<html lang>` to the language on screen                                                                             |
-| `onError`     | `console.error`                        | called when a dictionary fails to load                                                                                  |
-| `intlLocales` | the language keys                      | `Intl` locale per language                                                                                              |
-| `validate`    | `false`                                | check every loaded dictionary                                                                                           |
+| Option        | Default                                |                                                                                                                                                      |
+| ------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `storage`     | `localStorageAdapter("dictly.locale")` | where the explicit choice is kept. `cookieAdapter("locale")` when the server should know it too, `null` to keep nothing                              |
+| `detect`      | `true`                                 | pick a language from `navigator.languages` when nothing is stored. The whole list is matched, not only the first language: `["de", "ru"]` gives `ru` |
+| `htmlLang`    | `true`                                 | set `<html lang>` to the `Intl` locale of the language on screen (`intlLocales`, else the key)                                                       |
+| `onError`     | `console.error`                        | called when a dictionary fails to load                                                                                                               |
+| `intlLocales` | the language keys                      | `Intl` locale per language                                                                                                                           |
+| `validate`    | off                                    | `checkDictionaries` to check every loaded dictionary                                                                                                 |
+| `onIssues`    | `console.warn`                         | receives the problems `validate` finds                                                                                                               |
 
 ## Hooks without the factory
 
@@ -419,6 +468,18 @@ i18n.plural(i18n.getSnapshot().dictionary!.recipes, 3);
 
 `getFormatters(locale)`, `format`, `createPlural` and `matchLocale` are exported separately.
 
+## Testing
+
+The instance is created when its module is imported and starts loading at once. A test that depends on the language sets it explicitly instead of relying on the environment (Node reports `en-US`):
+
+```ts
+beforeEach(async () => {
+  await i18n.setLocale("ru");
+});
+```
+
+An instance made only for tests starts the same way on every machine with `initialLocale`, `storage: null` and `detect: false`.
+
 ## Bundle size
 
 The same small example in each library: a React component with a translated string with a parameter and a plural form. Minified with esbuild, React excluded, only what the first screen loads. Method and code: [`bench/size`](./bench/size), run with `pnpm bench:size`.
@@ -441,7 +502,7 @@ Measured in November 2026, the versions are in [`bench/size/package.json`](./ben
 - **Client-side.** dictly is built for client-rendered React apps (Vite, single-page apps). Server rendering is not a goal yet: the store detects the language in the browser, and there are no helpers for passing a dictionary from the server.
 - **Plural forms are recognised by their keys.** A section whose keys are only plural categories and include `other` (`{ one: ..., other: ... }`) is treated as plural forms. Rename a key if a section really looks like that.
 - **A module is recognised by its `default` key.** A loader result whose only key is `default` is taken for a module and unwrapped. A dictionary may have a `default` section next to other keys; a dictionary with nothing but a `default` section is not supported.
-- **No ICU syntax.** Plural forms are separate strings, not `{count, plural, ...}` inside one; `select` and nested plurals are not supported. In return, nothing is parsed at runtime.
+- **No ICU syntax.** Plural forms are separate strings, not `{count, plural, ...}` inside one; `select` and nested plurals are not supported (a phrase with several numbers is shown in [Plural forms](#plural-forms)). In return, nothing is parsed at runtime.
 
 ## License
 
