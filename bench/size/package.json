@@ -1,0 +1,26 @@
+{
+  "name": "dictly-bench-size",
+  "private": true,
+  "type": "module",
+  "description": "Bundle size of dictly next to other i18n libraries, on the same small example.",
+  "scripts": {
+    "measure": "node measure.mjs"
+  },
+  "devDependencies": {
+    "dictly": "link:../..",
+    "esbuild": "0.28.2",
+    "@lingui/core": "6.12.0",
+    "@lingui/react": "6.12.0",
+    "@nanostores/i18n": "1.3.3",
+    "@nanostores/react": "2.0.1",
+    "i18next": "27.1.1",
+    "nanostores": "1.5.5",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-i18next": "18.0.1",
+    "react-intl": "12.1.7",
+    "rosetta": "1.1.0",
+    "typesafe-i18n": "5.27.1",
+    "use-intl": "4.15.0"
+  }
+}

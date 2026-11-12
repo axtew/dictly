@@ -1,2 +1,4 @@
 dist
 pnpm-lock.yaml
+# Written by bench/size/measure.mjs
+bench/size/results.md

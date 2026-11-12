@@ -53,7 +53,8 @@
     "typecheck:compat": "pnpm --package=typescript@5.0 dlx tsc -p tsconfig.compat.json",
     "example:dev": "pnpm build && pnpm --filter dictly-example dev",
     "example:build": "pnpm build && pnpm --filter dictly-example build",
-    "example:deploy": "pnpm build && pnpm --filter dictly-example run deploy"
+    "example:deploy": "pnpm build && pnpm --filter dictly-example run deploy",
+    "bench:size": "pnpm build && pnpm --dir bench/size install --ignore-workspace && pnpm --dir bench/size measure"
   },
   "peerDependencies": {
     "react": ">=18"
