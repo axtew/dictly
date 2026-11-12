@@ -1,6 +1,6 @@
 {
   "name": "dictly",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed i18n for TypeScript and React: the dictionary is a plain object, translations are property access, placeholders are typed from the strings.",
   "keywords": [
     "i18n",

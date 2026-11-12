@@ -2,6 +2,10 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com), versions follow [semver](https://semver.org). While the version is 0.x, a minor release may change the API.
 
+## 0.1.1 - 2026-11-12
+
+- README: describing the dictionary shape with a separate interface and checking every language, the reference included, with `Translation<Messages>`.
+
 ## 0.1.0 - 2026-11-12
 
 The first release.
