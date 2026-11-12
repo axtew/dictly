@@ -1,0 +1,56 @@
+name: Release
+
+# A release is a version tag: `pnpm version minor` (or patch), then `git push --follow-tags`.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      # Creates the GitHub Release.
+      contents: write
+      # npm trusted publishing: GitHub proves to npm which repository and workflow
+      # publish, so no npm token is stored anywhere. Also signs the provenance.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      # Trusted publishing needs npm 11.5.1 or newer.
+      - run: npm install --global npm@^11.5.1
+      - run: pnpm install --frozen-lockfile
+
+      - name: Check that the tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match package.json version $version"
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # prepublishOnly runs lint, types, tests, build and the package check first.
+      # A version already on npm (the first one was published by hand) is skipped,
+      # so the tag still gets its GitHub Release.
+      - name: Publish to npm
+        run: |
+          if npm view "dictly@$VERSION" version > /dev/null 2>&1; then
+            echo "dictly@$VERSION is already on npm, skipping publish"
+          else
+            npm publish --provenance --access public
+          fi
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The notes are the section of CHANGELOG.md for this version.
+          awk -v v="$VERSION" '$0 ~ "^## " v "( |$)" { found = 1; next } /^## / && found { exit } found' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "$GITHUB_REF_NAME" --notes-file notes.md
