@@ -1,6 +1,6 @@
 {
   "name": "dictly",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Typed i18n for TypeScript and React: the dictionary is a plain object, translations are property access, placeholders are typed from the strings.",
   "keywords": [
     "i18n",
@@ -54,7 +54,8 @@
     "example:dev": "pnpm build && pnpm --filter dictly-example dev",
     "example:build": "pnpm build && pnpm --filter dictly-example build",
     "example:deploy": "pnpm build && pnpm --filter dictly-example run deploy",
-    "bench:size": "pnpm build && pnpm --dir bench/size install --ignore-workspace && pnpm --dir bench/size measure"
+    "bench:size": "pnpm build && pnpm --dir bench/size install --ignore-workspace && pnpm --dir bench/size measure",
+    "prepublishOnly": "pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm check:package"
   },
   "peerDependencies": {
     "react": ">=18"
