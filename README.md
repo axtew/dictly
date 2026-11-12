@@ -41,6 +41,7 @@ l.recipse; // type error: no such key
 - [Plural forms](#plural-forms)
 - [Elements inside text](#elements-inside-text)
 - [Formatters](#formatters)
+- [Shape as an interface](#shape-as-an-interface)
 - [JSON dictionaries](#json-dictionaries)
 - [Checking dictionaries](#checking-dictionaries)
 - [Switching the language](#switching-the-language)
@@ -220,6 +221,43 @@ The options are those of `Intl.NumberFormat`, `Intl.DateTimeFormat` and the othe
 createI18n({ locales, defaultLocale: "en", intlLocales: { en: "en-GB" } });
 ```
 
+## Shape as an interface
+
+Types don't have to come from the reference language. The shape can live in a separate interface, and every language, the reference included, is checked against it:
+
+```ts
+// i18n.types.ts
+import type { Plural, Template } from "dictly";
+
+export interface Messages {
+  title: string;
+  greeting: Template<"name">;
+  recipes: Plural<"count">;
+}
+```
+
+```ts
+// en.ts
+import type { Translation } from "dictly";
+import type { Messages } from "./i18n.types";
+
+export default {
+  title: "Recipes",
+  greeting: "Hello, {:name}",
+  recipes: { one: "{:count} recipe", other: "{:count} recipes" },
+} as const satisfies Translation<Messages>;
+```
+
+`Translation<Messages>` turns `Template<"name">` into a rule: the string must contain `{:name}`. A missing or extra key, a lost placeholder and a typo like `{:nmae}` are type errors.
+
+A few things to keep in mind:
+
+- Check against `Translation<Messages>`, not `Messages`. `Template<"name">` is a plain string with a label, so `const ru: Messages = { ... }` checks only the keys.
+- A field typed as plain `string` has no known placeholders: `format` parameters for it are optional and unchecked.
+- Types don't check plural forms of each language: a Russian dictionary without `few` compiles. `checkDictionaries` finds it.
+
+Compared with `typeof en`, placeholder names are written twice, in the interface and in the string. If they drift apart, the compiler shows it.
+
 ## JSON dictionaries
 
 Dictionaries can also come from a server or from `public/`. The loader returns the parsed JSON:
@@ -240,7 +278,7 @@ createI18n({
 });
 ```
 
-If the reference language is JSON as well, describe its shape with an interface, and placeholders stay typed:
+If the reference language is JSON as well, describe its shape with an interface ([as above](#shape-as-an-interface)), and placeholders stay typed:
 
 ```ts
 import type { Plural, Template } from "dictly";
