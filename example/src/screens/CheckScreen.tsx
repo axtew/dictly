@@ -1,4 +1,5 @@
 import type { DictionaryIssue } from "dictly";
+import { checkDictionaries } from "dictly/check";
 import { format } from "dictly/react";
 import { useEffect, useState } from "react";
 
@@ -10,10 +11,12 @@ interface CheckResults {
   broken: DictionaryIssue[];
 }
 
-/** The check and all three dictionaries are loaded only when this screen is opened. */
+/**
+ * The dictionaries are loaded only when this screen is opened. The checker itself
+ * is in the main chunk: `validate` imports it statically (see `i18n/index.ts`).
+ */
 async function runChecks(): Promise<CheckResults> {
-  const [{ checkDictionaries }, en, ru, de] = await Promise.all([
-    import("dictly/check"),
+  const [en, ru, de] = await Promise.all([
     import("../i18n/dictionaries/en"),
     import("../i18n/dictionaries/ru"),
     fetchJson<unknown>(DE_DICTIONARY_PATH),

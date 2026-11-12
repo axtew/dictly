@@ -1,4 +1,4 @@
-import type { DictionaryIssue } from "../check";
+import type { CheckDictionariesOptions, DictionaryIssue } from "../check";
 import type { Formatters, PluralFormatter } from "../format";
 import type { Dictionary } from "../types";
 import type { LocaleStorage } from "./_storage";
@@ -38,22 +38,32 @@ export interface I18nOptions<M extends Record<string, DictionaryLoader>, R exten
   initialLocale?: keyof M & string;
   /** Where the explicit choice is kept. `localStorage` by default, `null` to keep nothing. */
   storage?: LocaleStorage | null;
-  /** Picks a language from `navigator.languages` when nothing is stored. On by default. */
+  /**
+   * Picks a language from `navigator.languages` when nothing is stored. The whole
+   * list is matched, not only the first language: `["de", "ru"]` gives `ru`. On by default.
+   */
   detect?: boolean;
   /** `Intl` locale per language, for the formatters: `{ en: "en-GB" }`. The language key by default. */
   intlLocales?: Partial<Record<keyof M & string, string>>;
-  /** Sets `<html lang>` when a dictionary is shown. On by default. */
+  /** Sets `<html lang>` to the `Intl` locale of the language on screen (`intlLocales`, else the key). On by default. */
   htmlLang?: boolean;
   /** Called when a dictionary fails to load. `console.error` by default. */
   onError?: (error: unknown, locale: keyof M & string) => void;
   /**
-   * Checks every loaded dictionary against the default one with `checkDictionaries`
-   * (loading the default one if needed). `true` reports to `console.warn`, a function
-   * receives the problems. Off by default; `import.meta.env.DEV` is a common value,
-   * or always on for dictionaries that come from a server.
+   * Checks every loaded dictionary against the default one (loading the default
+   * one if needed). Pass `checkDictionaries` from `dictly/check`:
+   * `validate: import.meta.env.DEV && checkDictionaries`. The app imports the
+   * checker itself, so a build without it does not contain it. Off by default.
    */
-  validate?: boolean | ((issues: DictionaryIssue[], locale: keyof M & string) => void);
+  validate?: DictionaryChecker | false | null;
+  /** Receives the problems `validate` finds. `console.warn` by default. */
+  onIssues?: (issues: DictionaryIssue[], locale: keyof M & string) => void;
 }
+
+/** `checkDictionaries` from `dictly/check`, or a function of the same shape. */
+export type DictionaryChecker = (
+  options: CheckDictionariesOptions<Record<string, unknown>>,
+) => DictionaryIssue[];
 
 export type I18nStatus = "loading" | "ready" | "error";
 
@@ -86,10 +96,14 @@ export interface I18n<D, L extends string> extends I18nSnapshot<D, L> {
   readonly plural: PluralFormatter;
   /**
    * Switches the language. The previous dictionary stays on screen until the
-   * new one arrives; a loaded language switches at once. Resolves when done;
-   * never rejects: a failure goes to `error` and `onError`, calling again retries.
+   * new one arrives. A loaded language switches synchronously, inside the call,
+   * and the returned promise is already resolved. A failed load does not reject:
+   * it goes to `error` and `onError`, calling again retries. An unknown language
+   * rejects; check strings from outside (a URL, a profile) with `isLocale`.
    */
   setLocale: (locale: L) => Promise<void>;
+  /** Whether a value is one of `locales`: `if (i18n.isLocale(param)) void i18n.setLocale(param)`. */
+  isLocale: (value: unknown) => value is L;
   /** Loads a language in the background without switching to it. */
   preload: (locale: L) => Promise<void>;
   subscribe: (listener: () => void) => () => void;

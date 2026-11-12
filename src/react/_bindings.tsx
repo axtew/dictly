@@ -38,16 +38,18 @@ export interface I18nProviderProps {
   fallback?: ReactNode;
   /**
    * Shown when no dictionary could be loaded at all. A function receives
-   * `retry`. Falls back to `fallback`.
+   * `retry` and the load error. Falls back to `fallback`. There is no dictionary
+   * yet, so its text cannot come from one: keep it language-neutral (an icon)
+   * or pick it by `navigator.language`.
    */
-  errorFallback?: ReactNode | ((retry: () => void) => ReactNode);
+  errorFallback?: ReactNode | ((retry: () => void, error: unknown) => ReactNode);
 }
 
 export interface I18nBindings<I extends AnyI18n> {
   /**
    * Selects a branch of the dictionary: `useT((l) => l.recipes.list)`.
-   * Without a selector, the whole dictionary. The component updates when the
-   * language changes.
+   * Without a selector, the whole dictionary. The component updates only when
+   * another dictionary is on screen, not while one is loading.
    */
   useT: {
     (): DictionaryOf<I>;
@@ -69,6 +71,20 @@ function useSnapshot(i18n: AnyI18n) {
 }
 
 /**
+ * One field of the snapshot. React compares it with `Object.is` and skips the
+ * render while it stays the same, so a component that needs only the dictionary
+ * does not render when `pendingLocale`, `status` or `error` change.
+ */
+function useSnapshotField<K extends keyof ReturnType<AnyI18n["getSnapshot"]>>(
+  i18n: AnyI18n,
+  key: K,
+): ReturnType<AnyI18n["getSnapshot"]>[K] {
+  const read = () => i18n.getSnapshot()[key];
+
+  return useSyncExternalStore(i18n.subscribe, read, read);
+}
+
+/**
  * Hooks over one React context. `createI18nReact` makes a context of its own
  * per instance; the hooks exported from `dictly/react` share one context typed
  * by `Register`.
@@ -87,7 +103,7 @@ export function createBindings<I extends AnyI18n>(context: Context<I | null>): I
 
     if (i18n === null) throw noInstance("useT");
 
-    const { dictionary } = useSnapshot(i18n);
+    const dictionary: unknown = useSnapshotField(i18n, "dictionary");
 
     if (dictionary === null) {
       throw new Error("dictly: useT is used before the dictionary is loaded");
@@ -114,7 +130,8 @@ export function createBindings<I extends AnyI18n>(context: Context<I | null>): I
   }
 
   function useFormatters(): Formatters {
-    return useSnapshot(useI18n()).formatters;
+    // Formatters are cached per locale: the object changes only with the language on screen.
+    return useSnapshotField(useI18n(), "formatters");
   }
 
   return { useT, useLocale, useFormatters, useI18n };
@@ -131,14 +148,14 @@ export function Gate({
   fallback = null,
   errorFallback,
 }: I18nProviderProps & { i18n: AnyI18n }): ReactElement {
-  const { dictionary, status, locale } = useSnapshot(i18n);
+  const { dictionary, status, locale, error } = useSnapshot(i18n);
 
   if (dictionary !== null) return <>{children}</>;
 
   if (status === "error" && errorFallback !== undefined) {
     const retry = () => void i18n.setLocale(locale);
 
-    return <>{typeof errorFallback === "function" ? errorFallback(retry) : errorFallback}</>;
+    return <>{typeof errorFallback === "function" ? errorFallback(retry, error) : errorFallback}</>;
   }
 
   return <>{fallback}</>;

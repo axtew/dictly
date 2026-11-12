@@ -85,6 +85,70 @@ describe("createI18nReact", () => {
     expect(screen.getByRole("heading").textContent).toBe("Рецепты");
   });
 
+  it("renders useT and useFormatters only when another dictionary is on screen", async () => {
+    const ruLoad = deferred<typeof ru>();
+    const { i18n, I18nProvider, useT, useFormatters } = setup(() => ruLoad.promise);
+    await i18n.ready;
+    const renders = { title: 0, number: 0 };
+
+    function Title() {
+      renders.title += 1;
+
+      return <h1>{useT((l) => l.title)}</h1>;
+    }
+
+    function Count() {
+      renders.number += 1;
+
+      return <p>{useFormatters().number(1234.5)}</p>;
+    }
+
+    render(
+      <I18nProvider>
+        <Title />
+        <Count />
+      </I18nProvider>,
+    );
+    expect(renders).toEqual({ title: 1, number: 1 });
+
+    let switching!: Promise<void>;
+    act(() => {
+      switching = i18n.setLocale("ru");
+    });
+
+    expect(i18n.pendingLocale).toBe("ru");
+    expect(renders).toEqual({ title: 1, number: 1 });
+
+    ruLoad.resolve(ru);
+    await act(() => switching);
+
+    expect(screen.getByRole("heading").textContent).toBe("Рецепты");
+    expect(renders).toEqual({ title: 2, number: 2 });
+  });
+
+  it("does not render useT on a failed switch: the dictionary stays the same", async () => {
+    const { i18n, I18nProvider, useT } = setup(() => Promise.reject(new Error("offline")));
+    await i18n.ready;
+    let renders = 0;
+
+    function Title() {
+      renders += 1;
+
+      return <h1>{useT((l) => l.title)}</h1>;
+    }
+
+    render(
+      <I18nProvider>
+        <Title />
+      </I18nProvider>,
+    );
+
+    await act(() => i18n.setLocale("ru"));
+
+    expect(i18n.error).toBeInstanceOf(Error);
+    expect(renders).toBe(1);
+  });
+
   it("useLocale switches the language from a component", async () => {
     const { i18n, I18nProvider, useT, useLocale } = setup();
     await i18n.ready;
@@ -187,7 +251,9 @@ describe("createI18nReact", () => {
     render(
       <I18nProvider
         fallback={<p>Loading</p>}
-        errorFallback={(retry) => <button onClick={retry}>Retry</button>}
+        errorFallback={(retry, error) => (
+          <button onClick={retry}>Retry ({error instanceof Error ? error.message : ""})</button>
+        )}
       >
         <Title />
       </I18nProvider>,
@@ -195,8 +261,10 @@ describe("createI18nReact", () => {
 
     await act(() => i18n.ready);
 
+    expect(screen.getByRole("button").textContent).toBe("Retry (offline)");
+
     await act(async () => {
-      screen.getByRole("button", { name: "Retry" }).click();
+      screen.getByRole("button").click();
       await vi.waitFor(() => expect(i18n.status).toBe("ready"));
     });
 

@@ -248,6 +248,35 @@ describe("switching", () => {
     // @ts-expect-error: "de" is not a locale
     await expect(i18n.setLocale("de")).rejects.toThrow(/unknown locale/);
   });
+
+  it("tells a locale from any other value with isLocale", () => {
+    const i18n = createI18n({
+      locales: { en: resolved(en), ru: resolved(ru) },
+      defaultLocale: "en",
+      storage: null,
+    });
+    const fromUrl: string = "ru";
+
+    expect(i18n.isLocale(fromUrl)).toBe(true);
+    expect(i18n.isLocale("de")).toBe(false);
+    expect(i18n.isLocale(null)).toBe(false);
+
+    if (i18n.isLocale(fromUrl)) void i18n.setLocale(fromUrl);
+  });
+
+  it("switches a loaded language synchronously, inside the call", async () => {
+    const i18n = createI18n({
+      locales: { en: resolved(en), ru: resolved(ru) },
+      defaultLocale: "en",
+      storage: null,
+    });
+    await i18n.ready;
+    await i18n.preload("ru");
+
+    void i18n.setLocale("ru");
+
+    expect(i18n.locale).toBe("ru");
+  });
 });
 
 describe("failures", () => {
@@ -293,6 +322,21 @@ describe("failures", () => {
 
     expect(i18n.locale).toBe("en");
     expect(i18n.status).toBe("ready");
+  });
+
+  it("keeps the stored choice when the fallback is shown instead of it", async () => {
+    const storage = memoryStorage("ru");
+    const i18n = createI18n({
+      locales: { en: resolved(en), ru: () => Promise.reject(new Error("offline")) },
+      defaultLocale: "en",
+      storage,
+      onError: quiet,
+    });
+
+    await i18n.ready;
+
+    expect(i18n.locale).toBe("en");
+    expect(storage.value).toBe("ru");
   });
 
   it("is in the error state when even the default language fails, and can retry", async () => {

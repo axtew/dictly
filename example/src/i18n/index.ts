@@ -1,4 +1,5 @@
 import { createI18n, type Translation } from "dictly";
+import { checkDictionaries } from "dictly/check";
 import { createI18nReact } from "dictly/react";
 
 import type en from "./dictionaries/en";
@@ -46,7 +47,8 @@ export const i18n = createI18n({
     de: delayed(() => fetchJson<Translation<typeof en>>(DE_DICTIONARY_PATH)),
   },
   defaultLocale: "en",
-  validate: import.meta.env.DEV,
+  // In production the condition is false and the checker is left out of the build.
+  validate: import.meta.env.DEV && checkDictionaries,
 });
 
 export type Locale = (typeof i18n.locales)[number];

@@ -7,6 +7,7 @@ export {
   localStorageAdapter,
 } from "./_storage";
 export type {
+  DictionaryChecker,
   DictionaryLoader,
   I18n,
   I18nOptions,

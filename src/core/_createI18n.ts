@@ -47,14 +47,19 @@ export function createI18n<
     htmlLang = true,
     onError = (error: unknown, locale: L) =>
       console.error(`dictly: failed to load the "${locale}" dictionary`, error),
-    validate = false,
+    validate,
+    onIssues = (issues: DictionaryIssue[], locale: L) =>
+      console.warn(`dictly: ${issues.length} problem(s) in the "${locale}" dictionary`, issues),
   } = options;
 
-  const reportIssues =
-    typeof validate === "function"
-      ? validate
-      : (issues: DictionaryIssue[], locale: L) =>
-          console.warn(`dictly: ${issues.length} problem(s) in the "${locale}" dictionary`, issues);
+  const check = typeof validate === "function" ? validate : null;
+
+  // `validate: true` was the API before 0.2.0: the checker is now passed by the app.
+  if ((validate as unknown) === true) {
+    console.warn(
+      'dictly: "validate: true" is no longer supported, pass checkDictionaries from "dictly/check"',
+    );
+  }
 
   const locales = Object.keys(loaders) as L[];
 
@@ -131,7 +136,7 @@ export function createI18n<
 
           loaded.set(locale, dictionary);
 
-          if (validate !== false) void validateLocale(locale, dictionary);
+          if (check !== null) void validateLocale(check, locale, dictionary);
 
           return dictionary;
         })
@@ -147,11 +152,14 @@ export function createI18n<
    * Compares a loaded dictionary with the reference one (the default language),
    * loading the reference if needed. Off by default: meant for development and
    * for dictionaries from a server. A failure here never affects the screen.
-   * The checker is imported on demand, so an app without `validate` does not ship it.
+   * The checker comes from the app, so a build without `validate` does not contain it.
    */
-  async function validateLocale(locale: L, dictionary: Dictionary<D>): Promise<void> {
+  async function validateLocale(
+    checkDictionaries: NonNullable<typeof check>,
+    locale: L,
+    dictionary: Dictionary<D>,
+  ): Promise<void> {
     try {
-      const { checkDictionaries } = await import("../check");
       const reference = locale === defaultLocale ? dictionary : await load(defaultLocale);
       const issues = checkDictionaries({
         dictionaries: { [defaultLocale]: reference, [locale]: dictionary },
@@ -162,7 +170,7 @@ export function createI18n<
         },
       }).filter((issue) => issue.locale === locale);
 
-      if (issues.length > 0) reportIssues(issues, locale);
+      if (issues.length > 0) onIssues(issues, locale);
     } catch {
       // The reference failed to load: that is reported by the loading itself.
     }
@@ -188,12 +196,21 @@ export function createI18n<
       throw new Error(`dictly: unknown locale "${String(locale)}"`);
     }
 
+    await switchTo(locale, true);
+  }
+
+  /**
+   * `persist` is off only for the fallback at start: showing the default language
+   * because the stored one failed to load is not the user's choice, and the stored
+   * one is tried again on the next start.
+   */
+  async function switchTo(locale: L, persist: boolean): Promise<void> {
     const request = ++latestRequest;
     const ready = loaded.get(locale);
 
     if (ready !== undefined) {
       show(locale, ready);
-      storage?.set(locale);
+      if (persist) storage?.set(locale);
 
       return;
     }
@@ -210,7 +227,7 @@ export function createI18n<
       if (request !== latestRequest) return;
 
       show(locale, dictionary);
-      storage?.set(locale);
+      if (persist) storage?.set(locale);
     } catch (error) {
       onError(error, locale);
 
@@ -226,8 +243,9 @@ export function createI18n<
 
   /**
    * The first language is not stored (it may come from detection, not a choice).
-   * If it fails and is not the default one, the default language is tried,
-   * so a broken translation does not leave the app without any text.
+   * If it fails and is not the default one, the default language is shown,
+   * so a broken translation does not leave the app without any text. The fallback
+   * is not stored either: the stored choice stays and is tried on the next start.
    */
   async function start(): Promise<void> {
     const request = ++latestRequest;
@@ -248,7 +266,7 @@ export function createI18n<
       }
 
       update({ locale: defaultLocale, error });
-      await setLocale(defaultLocale);
+      await switchTo(defaultLocale, false);
     }
   }
 
@@ -280,6 +298,7 @@ export function createI18n<
     defaultLocale,
     ready,
     setLocale,
+    isLocale,
     preload: (locale) =>
       load(locale).then(
         () => undefined,

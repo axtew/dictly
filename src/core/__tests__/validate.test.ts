@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createI18n, type DictionaryIssue } from "../..";
+import { checkDictionaries } from "../../check";
 import { setBrowserLanguages } from "./_helpers";
 import en from "./fixtures/en";
 import ru from "./fixtures/ru";
@@ -25,7 +26,8 @@ describe("validate", () => {
       locales: { en: enLoader, ru: loadBrokenRu },
       defaultLocale: "en",
       storage: null,
-      validate: onIssues,
+      validate: checkDictionaries,
+      onIssues,
     });
 
     await i18n.ready;
@@ -39,13 +41,13 @@ describe("validate", () => {
     expect(enLoader).toHaveBeenCalledTimes(1);
   });
 
-  it("warns in the console with `true`", async () => {
+  it("warns in the console without `onIssues`", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const i18n = createI18n({
       locales: { en: () => Promise.resolve(en), ru: loadBrokenRu },
       defaultLocale: "en",
       storage: null,
-      validate: true,
+      validate: checkDictionaries,
     });
 
     await i18n.ready;
@@ -59,7 +61,8 @@ describe("validate", () => {
       locales: { en: () => Promise.resolve(en), ru: () => Promise.resolve(ru) },
       defaultLocale: "en",
       storage: null,
-      validate: onIssues,
+      validate: checkDictionaries,
+      onIssues,
     });
 
     await i18n.ready;
@@ -81,5 +84,36 @@ describe("validate", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("is off with `false`, the value of `import.meta.env.DEV && checkDictionaries` in production", async () => {
+    const onIssues = vi.fn<(issues: DictionaryIssue[], locale: string) => void>();
+    const i18n = createI18n({
+      locales: { en: () => Promise.resolve(en), ru: loadBrokenRu },
+      defaultLocale: "en",
+      storage: null,
+      validate: false,
+      onIssues,
+    });
+
+    await i18n.ready;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(onIssues).not.toHaveBeenCalled();
+  });
+
+  it("explains the old `validate: true` instead of ignoring it silently", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const i18n = createI18n({
+      locales: { en: () => Promise.resolve(en), ru: loadBrokenRu },
+      defaultLocale: "en",
+      storage: null,
+      // @ts-expect-error the API before 0.2.0
+      validate: true,
+    });
+
+    await i18n.ready;
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("checkDictionaries"));
   });
 });
