@@ -2,6 +2,26 @@
 
 The format follows [Keep a Changelog](https://keepachangelog.com), versions follow [semver](https://semver.org). While the version is 0.x, a minor release may change the API.
 
+## 0.2.0 - 2026-11-12
+
+Fixes and changes found while moving a real app (Recipe Book) to dictly.
+
+### Breaking
+
+- `validate` takes the checker from the app: `validate: import.meta.env.DEV && checkDictionaries` with `checkDictionaries` from `dictly/check`. Before, dictly imported the checker itself, and bundlers emitted it as a separate chunk even with `validate` off (a PWA put it into the precache). Now a build without `validate` does not contain it. `validate: true` logs a hint instead of being silently ignored.
+- Problems found by `validate` go to the new `onIssues` option (`console.warn` by default) instead of a function passed to `validate`.
+
+### Fixed
+
+- `useT` and `useFormatters` render only when another dictionary is on screen, not when a switch starts or fails.
+- The fallback to `defaultLocale` after a failed first load no longer overwrites the stored choice: it is tried again on the next start.
+
+### Added
+
+- `i18n.isLocale(value)` to check a string from a URL or a profile before `setLocale`.
+- `errorFallback` as a function gets the load error after `retry`.
+- README: sections for enum labels in the reference dictionary, phrases with several numbers, checking TS modules with `import.meta.glob`, synchronous switching, and testing.
+
 ## 0.1.1 - 2026-11-12
 
 - README: describing the dictionary shape with a separate interface and checking every language, the reference included, with `Translation<Messages>`.
